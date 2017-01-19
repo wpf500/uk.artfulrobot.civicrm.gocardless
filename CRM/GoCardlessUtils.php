@@ -161,6 +161,11 @@ class CRM_GoCardlessUtils
       "params" => ["session_token" => $deets['session_token']],
     ]);
 
+    // Store some relationships in GC
+    $gc_api->customers()->update($redirect_flow->links->customer, ['params' => [
+        'metadata' => ['civi_contact_id' => (string)$deets['contactID']]
+    ]]);
+
     // 2. Set up subscription at GC.
     // "creditor": "CR123",
     // "mandate": "MD123",
@@ -173,7 +178,7 @@ class CRM_GoCardlessUtils
       'interval'      => $interval,
       'interval_unit' => $interval_unit, // yearly etc.
       'links'         => ['mandate' => $redirect_flow->links->mandate],
-      //'metadata' => ['order_no' => 'ABCD1234'],
+      'metadata'      => ['civi_contribution_id' => (string)$deets['contributionID']],
     ]]);
 
     // Return our objects in case that's helpful.
@@ -272,17 +277,20 @@ class CRM_GoCardlessUtils
     try {
       // Update the date of the contribution to the start date returned by GC.
       // We'll leave the payment as 'Pending' though as we haven't had it yet.
+      $subscription = $result['subscription'];
       civicrm_api3('Contribution', 'create', [
         'id' => $deets['contributionID'],
         'receive_date' => $subscription->start_date,
+        'trxn_id' => $subscription->id,
+        'invoice_id' => $result['redirect_flow']->links->customer
       ]);
 
       if (!empty($deets['contributionRecurID'])) {
-        // Update the recurring contribution to In Progress, set the trxn_id and start_date.
+        // Update the recurring contribution to In Progress, set the start_date.
+        // trxn_id will be populated with the payment ID when the payment is confirmed
         civicrm_api3('ContributionRecur', 'create', [
           'id' => $deets['contributionRecurID'],
           'start_date' => $subscription->start_date,
-          'trxn_id' => $subscription->id,
           'contribution_status_id' => "In Progress",
         ]);
       }
