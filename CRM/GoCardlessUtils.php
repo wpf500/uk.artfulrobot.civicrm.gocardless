@@ -161,6 +161,8 @@ class CRM_GoCardlessUtils
       "params" => ["session_token" => $deets['session_token']],
     ]);
 
+    CRM_Core_Error::debug_var("redirect_flow", $redirect_flow);
+
     // Store some relationships in GC
     $gc_api->customers()->update($redirect_flow->links->customer, ['params' => [
         'metadata' => ['civi_contact_id' => (string)$deets['contactID']]
@@ -238,6 +240,8 @@ class CRM_GoCardlessUtils
           'interval_unit' => $interval_unit . 'ly', // year->yearly
           'amount' => $amount,
       ]);
+
+      CRM_Core_Error::debug_var('result', $result);
     }
     catch (Exception $e) {
       // Something has gone wrong at this point the chance is that the subscription was not set up.
@@ -262,6 +266,7 @@ class CRM_GoCardlessUtils
       }
 
       CRM_Core_Session::setStatus("Sorry, we were unable to set up your Direct Debit. Please call us.", 'Error', 'error');
+      CRM_Core_Error::debug_var("Exception", $e);
 
       /* I'm not sure this applies to memberships...
       $cancelURL  = CRM_Utils_System::url( 'civicrm/contribute/transact',
@@ -313,6 +318,7 @@ class CRM_GoCardlessUtils
       // The Subscription *was* set up but we died updating CiviCRM about it. Disaster, darling.
       // This is not going to be nice.
       CRM_Core_Session::setStatus("Sorry, there was a problem recording the details of your Direct Debit. Please call us.", 'Error', 'error');
+      CRM_Core_Error::debug_var("Exception", $e);
     }
   }
 }
